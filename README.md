@@ -1,4 +1,24 @@
 # Hidden_Markov_model_option_pricing-
-This python scripts deals with European option pricing using Hidden Markov Models. Instead of assuming Volatility as a constant in the Black Scholes Option Pricing Formula, we treat volatility as a random variable which is dependent upon some hidden random variable which we cannot directly observe. This helps us to get a better prediction of option price. This script contains a comparison between Hidden Markov Model based Black Scholes pricing and 30 days Realised Volatility to see if there  is a difference between the two values. 
-This project uses basic python libraries such as numpy, pandas and some finance related library such as yahoo finance. It also uses scipy library for calculation, while also utilizing HMM library for Hidden Markov Model computation. This project uses real life values instead of simulated values to see if the different models makes a difference in the real world as well. 
-One of the limitation of HMM models can be higher computational power required for the calculations along with a larger dataset for convergence of the Transition Probability Matrix. Although the availability of data is not a big bottleneck, the additional time required to compute the values can be bad for the trading as we want low latency in our code base.  
+# 📈 Option Pricing via Hidden Markov Models (HMM) & Real-Time Market Volatility
+
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![yfinance](https://img.shields.io/badge/data-yfinance-green.svg)](https://pypi.org/project/yfinance/)
+
+An end-to-end Quantitative Finance library in Python that fits a 2-State Gaussian Hidden Markov Model (HMM) to historical asset returns, projects multi-period forward regime transitions, and evaluates option pricing against standard Realized Volatility and real-time market options quotes via `yfinance`.
+
+---
+
+## 📌 Project Overview
+
+Traditional Black-Scholes pricing assumes constant volatility ($\sigma$). However, financial markets exhibit structural regime switching between low-volatility (bullish/sideways) and high-volatility (bearish/crisis) states.
+
+This project implements:
+1. **Regime Identification**: Uses EM (`hmmlearn`) to fit a 2-state Gaussian HMM to historical asset log-returns.
+2. **Forward State Occupancy**: Projects forward state probability vectors $\pi_t = \pi_0 P^t$ across option maturity $T$.
+3. **Effective Volatility Estimation**: Calculates time-weighted variance $\text{Var}(r) = w_0 \sigma_0^2 + w_1 \sigma_1^2$ to produce $\sigma_{\text{HMM}}$.
+4. **Market Benchmarking**: Fetches live options chains via Yahoo Finance (`yfinance`) and compares HMM model prices against 30-day Realized Volatility and actual market trading prices.
+
+---
+
+
