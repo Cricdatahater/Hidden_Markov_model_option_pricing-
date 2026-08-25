@@ -21,4 +21,19 @@ This project implements:
 
 ---
 
+## 🧮 Mathematical Framework
 
+### 1. Daily Transition Probability Matrix
+Given daily return observations $r_t = \ln(S_t / S_{t-1})$, the underlying state transitions follow a Markov process with transition matrix $P$:
+
+$$P = \begin{bmatrix} P_{00} & P_{01} \\ P_{10} & P_{11} \end{bmatrix}$$
+
+### 2. Forward Time-Occupancy Projection
+For $N = \text{round}(T \times 252)$ trading days until expiration, cumulative regime occupancy vector $\mathbf{w} = [w_0, w_1]$ is derived via matrix exponentiation:
+
+$$\mathbf{w} = \frac{1}{N} \sum_{t=1}^{N} \pi_0 P^t, \quad \text{where } \sum w_i = 1.0$$
+
+### 3. Effective HMM Volatility
+$$\sigma_{\text{HMM}} = \sqrt{w_0 \sigma_0^2 + w_1 \sigma_1^2}$$
+
+---
