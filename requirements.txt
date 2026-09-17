@@ -1,0 +1,7 @@
+numpy>=1.26
+scipy>=1.11
+pandas>=2.1
+hmmlearn>=0.3.2
+yfinance>=0.2.40
+jupyterlab>=4.0
+pytest>=8.0
