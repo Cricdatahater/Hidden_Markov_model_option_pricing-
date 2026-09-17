@@ -1,55 +1,61 @@
-# Hidden_Markov_model_option_pricing-
-# 📈 Option Pricing via Hidden Markov Models (HMM) & Real-Time Market Volatility
+# Regime-Switching Volatility & Option-Pricing Experiments
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![yfinance](https://img.shields.io/badge/data-yfinance-green.svg)](https://pypi.org/project/yfinance/)
+An exploratory quantitative-finance project that uses two-state Gaussian hidden Markov models to study volatility regimes and feed regime-weighted volatility assumptions into European option-pricing experiments.
 
-An end-to-end Quantitative Finance library in Python that fits a 2-State Gaussian Hidden Markov Model (HMM) to historical asset returns, projects multi-period forward regime transitions, and evaluates option pricing against standard Realized Volatility and real-time market options quotes via `yfinance`.
+## Implemented work
 
----
+- frequentist two-state Gaussian HMM fitting with `hmmlearn`;
+- forward regime-occupancy projection over an option horizon;
+- a custom Gibbs sampler with forward-filtering backward-sampling for a zero-mean Bayesian Gaussian HMM;
+- posterior option-price distributions and credible intervals;
+- optional comparison with current AAPL prices and option-chain quotes from `yfinance`.
 
-## 📌 Project Overview
+The notebook is an experiment, not a trading system. It does not include transaction costs, dividends, early exercise, slippage, survivorship-bias controls, or a historical out-of-sample backtest.
 
-Traditional Black-Scholes pricing assumes constant volatility ($\sigma$). However, financial markets exhibit structural regime switching between low-volatility (bullish/sideways) and high-volatility (bearish/crisis) states.
+## Reproduce
 
-This project implements:
-1. **Regime Identification**: Uses EM (`hmmlearn`) to fit a 2-state Gaussian HMM to historical asset log-returns.
-2. **Forward State Occupancy**: Projects forward state probability vectors $\pi_t = \pi_0 P^t$ across option maturity $T$.
-3. **Effective Volatility Estimation**: Calculates time-weighted variance $\text{Var}(r) = w_0 \sigma_0^2 + w_1 \sigma_1^2$ to produce $\sigma_{\text{HMM}}$.
-4. **Market Benchmarking**: Fetches live options chains via Yahoo Finance (`yfinance`) and compares HMM model prices against 30-day Realized Volatility and actual market trading prices.
-5. **Bayesian Framework**: Utilises Bayesian Inferential techniques to calculate regime volatility, reducing the bias from initialising wrong values. 
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pytest
+jupyter lab HMM_Black_Scholes.ipynb
+```
 
----
+Live-data cells depend on Yahoo Finance availability and will change over time. The tests cover deterministic mathematical invariants without network access.
 
-## 📌 Features
+## Verified pricing API
 
-* **Real-Time Data Pipeline:** Automatically fetches historical daily returns and live options chain data directly from Yahoo Finance (`yfinance`).
-* **Bayesian Regime Estimation:** Fits a 2-State Gaussian HMM using Gibbs Sampling with Forward-Filtering Backward-Sampling (FFBS) to estimate transition probabilities $P$ and regime variances $\sigma_k^2$.
-* **Convex Mixture Option Pricing:** Preserves fat-tail optionality by evaluating state-mixture Black-Scholes pricing per posterior sample draw rather than pre-averaging variances.
-* **Posterior Uncertainty Quantification:** Generates 95% Bayesian Credible Intervals for option prices to assess model parameter uncertainty against live market quotes.
-* **Robust Data Filtering:** Handles Yahoo Finance quoting artifacts and illiquid contracts by filtering out zero-bid and corrupt implied volatility rows.
+```python
+from src.pricing import black_scholes_price, expected_regime_occupancy
 
----
+call = black_scholes_price(spot=100, strike=100, maturity=0.5,
+                           rate=0.04, volatility=0.20, option_type="call")
+weights = expected_regime_occupancy([1, 0], [[0.98, 0.02], [0.10, 0.90]], 126)
+```
 
-## 🧮 Mathematical Framework
+## Important audit notes
 
-### 1. Daily Transition Probability Matrix
-Given daily return observations $r_t = \ln(S_t / S_{t-1})$, the underlying state transitions follow a Markov process with transition matrix $P$:
+- The original notebook's `option_type == ['call', 'Call']` comparison never matches a string, so that function returns the put branch for `"call"`. The tested module corrects this.
+- Sorting regimes requires relabelling every state-dependent object consistently. This should receive additional simulation-recovery tests before research use.
+- A convex mixture of Black–Scholes prices is a modelling choice; it is not equivalent to a complete regime-switching option-pricing derivation.
+- Credible intervals reflect the stated HMM and priors, not total market/model uncertainty.
 
-$$P = \begin{bmatrix} P_{00} & P_{01} \\ P_{10} & P_{11} \end{bmatrix}$$
+## Structure
 
-### 2. Forward Time-Occupancy Projection
-For $N = \text{round}(T \times 252)$ trading days until expiration, cumulative regime occupancy vector $\mathbf{w} = [w_0, w_1]$ is derived via matrix exponentiation:
+```text
+.
+├── HMM_Black_Scholes.ipynb  # exploratory frequentist/Bayesian experiments
+├── src/pricing.py            # tested pricing and occupancy primitives
+├── tests/test_pricing.py
+├── requirements.txt
+└── README.md
+```
 
-$$\mathbf{w} = \frac{1}{N} \sum_{t=1}^{N} \pi_0 P^t, \quad \text{where } \sum w_i = 1.0$$
+## Highest-value next steps
 
-### 3. Effective HMM Volatility
-$$\sigma_{\text{HMM}} = \sqrt{w_0 \sigma_0^2 + w_1 \sigma_1^2}$$
-
-### 4. Bayesian Gaussian HMM (Gibbs Sampler + FFBS)
- Daily log-returns $r_t = \ln(S_t / S_{t-1})$ follow a Gaussian distribution conditioned on unobserved latent regime $z_t \in \{0, 1\}$: $r_t \mid z_t = k \sim \mathcal{N}(0, \sigma_k^2)$ The Gibbs sampler updates parameters sequentially:Hidden States ($z_{1:T}$): Sampled via Forward-Filtering Backward-Sampling (FFBS).Transition Matrix ($P$): Sampled using a Dirichlet conjugate prior $\text{Dirichlet}(\alpha_0 + N_{ij})$.Regime Variances ($\sigma_k^2$): Sampled using a Conjugate Inverse-Gamma prior $\text{Inv-Gamma}\left(a_0 + \frac{N_k}{2}, b_0 + \frac{\sum r_t^2}{2}\right)$.Identifiability is maintained by enforcing $\sigma_0 < \sigma_1$ across draws (State 0 = Low Volatility, State 1 = High Volatility).
-
----
-
+1. Split the HMM sampler, data acquisition, diagnostics, and pricing engine into modules.
+2. Add trace plots, effective sample size, convergence diagnostics, and prior-sensitivity checks.
+3. Freeze a dated market-data snapshot and add a walk-forward evaluation against simple volatility baselines.
+4. Report error metrics by moneyness and maturity; document dividends and rate sources.
 
